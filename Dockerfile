@@ -1,0 +1,21 @@
+FROM maven:3.9-eclipse-temurin-17 as MVN_BUILD
+
+WORKDIR /opt/solo/
+ADD . /tmp
+RUN cd /tmp && mvn package -DskipTests -Pci -q && mv target/solo/* /opt/solo/ \
+&& cp -f /tmp/src/main/resources/docker/* /opt/solo/
+
+FROM eclipse-temurin:17-jre-jammy
+LABEL maintainer="Liang Ding<845765@qq.com>"
+
+WORKDIR /opt/solo/
+COPY --from=MVN_BUILD /opt/solo/ /opt/solo/
+RUN apt-get update && apt-get install -y ca-certificates tzdata
+
+ENV TZ=Asia/Shanghai
+ARG git_commit=0
+ENV git_commit=$git_commit
+
+EXPOSE 8080
+
+ENTRYPOINT [ "java", "-cp", "lib/*:.", "org.b3log.solo.Server" ]
